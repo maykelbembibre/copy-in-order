@@ -4,6 +4,7 @@ import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.Dimension;
+import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
@@ -25,9 +26,9 @@ import javax.swing.JTextArea;
 import javax.swing.JTextField;
 
 import copy_in_order.ui.j_components.DirectoryChooser;
+import copy_in_order.ui.j_components.FileJTextField;
 import copy_in_order.ui.j_components.FileSelectionJPanel;
 import copy_in_order.ui.j_components.HorizontalSeparator;
-import copy_in_order.ui.j_components.FileJTextField;
 import copy_in_order.ui.j_components.ReadOnlyJTextArea;
 import copy_in_order.ui.j_components.buttons.StartJButton;
 import copy_in_order.ui.j_components.buttons.StopJButton;
@@ -164,8 +165,8 @@ public class AppWindow extends JFrame {
 		fileCopyPanel.setLayout(new BoxLayout(fileCopyPanel, BoxLayout.Y_AXIS));
 		
 		this.fileSelectionPanel = new FileSelectionJPanel();
-		fileSelectionPanel.setBorder(BorderFactory.createEmptyBorder(GAP, GAP, GAP, GAP));
-		fileCopyPanel.add(fileSelectionPanel);
+		this.fileSelectionPanel.setBorder(BorderFactory.createEmptyBorder(GAP, GAP, GAP, GAP));
+		fileCopyPanel.add(this.fileSelectionPanel);
 		fileCopyPanel.add(new HorizontalSeparator());
 		
 		JProgressBar progressBar = new JProgressBar(0, 100);
@@ -193,6 +194,12 @@ public class AppWindow extends JFrame {
         		scrollableTaskOutput.getBorder()
         	)
         );
+        
+        // Make the scroll pane want to be at least as big as the text area.
+        Insets scrollableTaskOutputInsets = scrollableTaskOutput.getInsets();
+        Dimension taskOutputPreferredSize = taskOutput.getPreferredSize();
+        scrollableTaskOutput.setPreferredSize(Tools.add(taskOutputPreferredSize, scrollableTaskOutputInsets));
+        
         fileCopyPanel.add(scrollableTaskOutput);
         
         return fileCopyPanel;

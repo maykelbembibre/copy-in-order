@@ -22,5 +22,4 @@ public class ReadOnlyJTextArea extends JTextArea {
         this.setWrapStyleWord(true);
         this.setLineWrap(true);
 	}
-	
 }
