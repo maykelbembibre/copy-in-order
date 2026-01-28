@@ -6,12 +6,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
 import copy_in_order.logic.exceptions.FileManagementException;
-import copy_in_order.logic.models.ComparableFile;
 
 /**
  * Logic class for doing the file management operations.
@@ -57,27 +55,22 @@ public class FileManager {
 	/**
 	 * Gets the children already filtered by file extension and ordered
 	 * lexicographically.
-	 * @param folder A folder.
+	 * @param directory A directory.
 	 * @return The list of filtered and ordered children.
 	 */
-	public List<File> getChildren(File folder) {
-		List<ComparableFile> children = this.fileOrderManager.order(Arrays.asList(folder.listFiles()));
-		List<File> result = new ArrayList<>();
-		for (ComparableFile child : children) {
-			result.add(child.getFile());
-		}
-		return result;
+	public List<File> getChildren(File directory) {
+		return this.fileOrderManager.getChildren(directory);
 	}
 	
 	/**
 	 * Copies the given file to the given folder.
 	 * @param file A file.
-	 * @param folder A folder.
+	 * @param directory A directory.
 	 * @throws IOException If something goes wrong.
 	 */
-	public static void copyFileToFolder(File file, File folder) throws IOException {
+	public static void copyFileToFolder(File file, File directory) throws IOException {
 		Path source = file.toPath();
-		Path destination = new File(folder, file.getName()).toPath();
+		Path destination = new File(directory, file.getName()).toPath();
 		long sourceSize = getSize(source);
 		long destinationSize = getSize(destination);
 		if (sourceSize != destinationSize) {

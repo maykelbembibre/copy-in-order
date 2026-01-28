@@ -40,7 +40,7 @@ public class AppWindow extends JFrame {
 	
 	private static final long serialVersionUID = 2516782550252442192L;
 
-	private final static int GAP = 10;
+	public final static int GAP = 10;
 	
 	private final JPanel contentPane;
 	private final JFileChooser directoryChooser = new DirectoryChooser();
@@ -195,18 +195,18 @@ public class AppWindow extends JFrame {
 	private void drawContentPane() {
 		JPanel verticalPanel = new JPanel();
 		verticalPanel.setLayout(new BoxLayout(verticalPanel, BoxLayout.Y_AXIS));
-		this.sourceFileChooseButton = addFolderSelectionComponents(
-			verticalPanel, this.sourceFileTextField, "Source folder", null
-		);
 		FileRunnable additionalButtonLogic = new FileRunnable() {
 			@Override
 			public void run(File file) {
 				subfolderSelection.drawSubFolders(file);
 			}
 		};
-		this.destinationFileChooseButton = addFolderSelectionComponents(
-			verticalPanel, this.destinationFileTextField, "Destination folder",
+		this.sourceFileChooseButton = addFolderSelectionComponents(
+			verticalPanel, this.sourceFileTextField, "Source folder",
 			additionalButtonLogic
+		);
+		this.destinationFileChooseButton = addFolderSelectionComponents(
+			verticalPanel, this.destinationFileTextField, "Destination folder", null
 		);
 		JPanel fileCopyPanel = drawFileCopyPanel();
 		

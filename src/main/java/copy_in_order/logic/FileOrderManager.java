@@ -2,6 +2,7 @@ package copy_in_order.logic;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -29,13 +30,17 @@ public class FileOrderManager {
 	}
 	
 	/**
-	 * Orders the given files.
-	 * @param files Files.
-	 * @return The ordered list of files.
+	 * Gets the children already filtered by file extension and ordered
+	 * lexicographically.
+	 * @param directory A directory.
+	 * @return The list of filtered and ordered children.
 	 */
-	public List<ComparableFile> order(Iterable<File> files) {
-		List<ComparableFile> result = this.filter(files);
-		Collections.sort(result);
+	public List<File> getChildren(File directory) {
+		List<ComparableFile> children = this.order(Arrays.asList(directory.listFiles()));
+		List<File> result = new ArrayList<>();
+		for (ComparableFile child : children) {
+			result.add(child.getFile());
+		}
 		return result;
 	}
 	
@@ -68,6 +73,17 @@ public class FileOrderManager {
 				}
 			}
 		}
+		return result;
+	}
+	
+	/**
+	 * Orders the given files.
+	 * @param files Files.
+	 * @return The ordered list of files.
+	 */
+	private List<ComparableFile> order(Iterable<File> files) {
+		List<ComparableFile> result = this.filter(files);
+		Collections.sort(result);
 		return result;
 	}
 }
