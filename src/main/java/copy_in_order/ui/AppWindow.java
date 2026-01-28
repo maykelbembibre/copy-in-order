@@ -6,15 +6,13 @@ import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.beans.PropertyChangeListener;
 import java.io.File;
-import java.util.Arrays;
-import java.util.Collection;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
+import javax.swing.JComponent;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -29,7 +27,10 @@ import copy_in_order.ui.j_components.DirectoryChooser;
 import copy_in_order.ui.j_components.HorizontalSeparator;
 import copy_in_order.ui.j_components.JFileTextField;
 import copy_in_order.ui.j_components.ReadOnlyJTextArea;
-import copy_in_order.ui.listeners.FileCopyPropertyChangeListener;
+import copy_in_order.ui.j_components.SubfolderSelectionJPanel;
+import copy_in_order.ui.j_components.buttons.StartButton;
+import copy_in_order.ui.j_components.buttons.StopJButton;
+import copy_in_order.ui.runnables.FileRunnable;
 import copy_in_order.ui.workers.FileCopyTask;
 
 /**
@@ -48,6 +49,7 @@ public class AppWindow extends JFrame {
 	private JButton sourceFileChooseButton;
 	private JButton destinationFileChooseButton;
 	private FileCopyTask task;
+	private SubfolderSelectionJPanel subfolderSelection;
 	
 	/**
 	 * Creates the window.
@@ -72,9 +74,34 @@ public class AppWindow extends JFrame {
 	    this.drawContentPane();
 	
 	    //Display the window.
+	    this.pack();
 	    this.setVisible(true);
 	}
 	
+	public FileCopyTask getTask() {
+		return task;
+	}
+
+	public void setTask(FileCopyTask task) {
+		this.task = task;
+	}
+
+	public JFileTextField getSourceFileTextField() {
+		return sourceFileTextField;
+	}
+
+	public JFileTextField getDestinationFileTextField() {
+		return destinationFileTextField;
+	}
+
+	public JButton getSourceFileChooseButton() {
+		return sourceFileChooseButton;
+	}
+
+	public JButton getDestinationFileChooseButton() {
+		return destinationFileChooseButton;
+	}
+
 	private static void adjustTextField(JTextField jTextField) {
 		jTextField.setMaximumSize(new Dimension(Integer.MAX_VALUE, jTextField.getPreferredSize().height));
 	}
@@ -85,12 +112,15 @@ public class AppWindow extends JFrame {
 		return jFileTextField;
 	}
 	
-	private JButton addFolderSelectionComponents(Container verticalPanel, JFileTextField fileTextField, String label) {
-		JPanel verticalPanelContent = new JPanel();
-		verticalPanelContent.setLayout(new BoxLayout(verticalPanelContent, BoxLayout.Y_AXIS));
-		verticalPanelContent.setBorder(BorderFactory.createEmptyBorder(GAP, GAP, GAP, GAP));
-		verticalPanelContent.add(new JLabel(label));
-		verticalPanelContent.add(Box.createVerticalStrut(GAP));
+	private JButton addFolderSelectionComponents(
+		Container verticalPanel, JFileTextField fileTextField, String label,
+		FileRunnable additionalButtonLogic
+	) {
+		JPanel folderSelectionPanel = new JPanel();
+		folderSelectionPanel.setLayout(new BoxLayout(folderSelectionPanel, BoxLayout.Y_AXIS));
+		folderSelectionPanel.setBorder(BorderFactory.createEmptyBorder(GAP, GAP, GAP, GAP));
+		folderSelectionPanel.add(new JLabel(label));
+		folderSelectionPanel.add(Box.createVerticalStrut(GAP));
 		JPanel horizontalPanel = new JPanel();
 	    BoxLayout horizontalLayout = new BoxLayout(horizontalPanel, BoxLayout.X_AXIS);
 		horizontalPanel.setLayout(horizontalLayout);
@@ -111,86 +141,53 @@ public class AppWindow extends JFrame {
 		        if (returnVal == JFileChooser.APPROVE_OPTION) {
 		            File file = AppWindow.this.directoryChooser.getSelectedFile();
 		            fileTextField.setSelectedFile(file);
-		        } else {
-		        	// Open command cancelled by user.
+		            if (additionalButtonLogic != null && file != null) {
+		            	additionalButtonLogic.run(file);
+		            }
 		        }
 			}});
 		horizontalPanel.add(selectDirectoryButton);
-		verticalPanelContent.add(horizontalPanel);
-		verticalPanel.add(verticalPanelContent);
+		folderSelectionPanel.add(horizontalPanel);
+		verticalPanel.add(folderSelectionPanel);
 		verticalPanel.add(new HorizontalSeparator());
 		return selectDirectoryButton;
 	}
 	
 	private JPanel drawFileCopyPanel() {
-		JPanel fileCopyPanel = new JPanel(new BorderLayout());
-
+		JPanel fileCopyPanel = new JPanel();
+		fileCopyPanel.setLayout(new BoxLayout(fileCopyPanel, BoxLayout.Y_AXIS));
+		
+		this.subfolderSelection = new SubfolderSelectionJPanel();
+		subfolderSelection.setBorder(BorderFactory.createEmptyBorder(GAP, GAP, GAP, GAP));
+		fileCopyPanel.add(subfolderSelection);
+		fileCopyPanel.add(new HorizontalSeparator());
+		
 		JProgressBar progressBar = new JProgressBar(0, 100);
         progressBar.setValue(0);
         progressBar.setStringPainted(true);
-		
         JTextArea taskOutput = new ReadOnlyJTextArea();
+		JButton stopButton = new StopJButton(this);
+		JButton startButton = new StartButton(this, progressBar, taskOutput, stopButton);
         
-		JButton startButton = new JButton("Copy files");
-		JButton stopButton = new JButton("Stop");
-		Collection<Component> sensitiveComponents = Arrays.asList(
-			startButton, this.sourceFileTextField, this.destinationFileTextField,
-			this.sourceFileChooseButton, this.destinationFileChooseButton
-		);
-		startButton.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				File sourceDirectory = AppWindow.this.sourceFileTextField.getSelectedFile();
-				File destinationDirectory = AppWindow.this.destinationFileTextField.getSelectedFile();
-				
-				progressBar.setValue(0);
-		    	taskOutput.setText("");
-		    	for (Component component : sensitiveComponents) {
-		    		component.setEnabled(false);
-		    	}
-		        
-		        //Instances of javax.swing.SwingWorker are not reusuable, so
-		        //we create new instances as needed.
-		        task = new FileCopyTask(
-		        	sourceDirectory, destinationDirectory, taskOutput, sensitiveComponents, stopButton
-		        );
-		        
-		        PropertyChangeListener propertyChangeListener = new FileCopyPropertyChangeListener(
-	            	progressBar, taskOutput, task
-	            );
-		        task.addPropertyChangeListener(propertyChangeListener);
-		        task.execute();
-		        
-		        // After a task starts, the user has the possibility of stopping it.
-		        stopButton.setEnabled(true);
-			}
-		});
-		stopButton.setEnabled(false);
-		stopButton.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				// It's better that as soon as the stop button is clicked, it can't get clicked again.
-				stopButton.setEnabled(false);
-				
-				if (task != null) {
-	                task.cancel(true);
-				}
-			}
-		});
-		
-        JPanel panel = new JPanel();
-        BoxLayout horizontalLayout = new BoxLayout(panel, BoxLayout.X_AXIS);
-        panel.setLayout(horizontalLayout);
-        panel.add(startButton);
-        panel.add(Box.createRigidArea(new Dimension(GAP, 0)));
-        panel.add(stopButton);
-        panel.add(Box.createRigidArea(new Dimension(GAP, 0)));
-        panel.add(progressBar);
-        panel.setBorder(BorderFactory.createEmptyBorder(0, 0, GAP, 0));
- 
-        fileCopyPanel.add(panel, BorderLayout.PAGE_START);
-        fileCopyPanel.add(new JScrollPane(taskOutput), BorderLayout.CENTER);
-        fileCopyPanel.setBorder(BorderFactory.createEmptyBorder(GAP, GAP, GAP, GAP));
+        JPanel horizontalPanel = new JPanel();
+        BoxLayout horizontalLayout = new BoxLayout(horizontalPanel, BoxLayout.X_AXIS);
+        horizontalPanel.setBorder(BorderFactory.createEmptyBorder(GAP, GAP, GAP, GAP));
+        horizontalPanel.setLayout(horizontalLayout);
+        horizontalPanel.add(startButton);
+        horizontalPanel.add(Box.createRigidArea(new Dimension(GAP, 0)));
+        horizontalPanel.add(stopButton);
+        horizontalPanel.add(Box.createRigidArea(new Dimension(GAP, 0)));
+        horizontalPanel.add(progressBar);
+        
+        fileCopyPanel.add(horizontalPanel);
+        JComponent scrollableTaskOutput = new JScrollPane(taskOutput);
+        scrollableTaskOutput.setBorder(
+        	BorderFactory.createCompoundBorder(
+    			BorderFactory.createEmptyBorder(0, GAP, GAP, GAP),
+        		scrollableTaskOutput.getBorder()
+        	)
+        );
+        fileCopyPanel.add(scrollableTaskOutput);
         
         return fileCopyPanel;
 	}
@@ -198,21 +195,28 @@ public class AppWindow extends JFrame {
 	private void drawContentPane() {
 		JPanel verticalPanel = new JPanel();
 		verticalPanel.setLayout(new BoxLayout(verticalPanel, BoxLayout.Y_AXIS));
-		this.contentPane.add(verticalPanel, BorderLayout.CENTER);
 		this.sourceFileChooseButton = addFolderSelectionComponents(
-			verticalPanel, this.sourceFileTextField, "Source folder"
+			verticalPanel, this.sourceFileTextField, "Source folder", null
 		);
+		FileRunnable additionalButtonLogic = new FileRunnable() {
+			@Override
+			public void run(File file) {
+				subfolderSelection.drawSubFolders(file);
+			}
+		};
 		this.destinationFileChooseButton = addFolderSelectionComponents(
-			verticalPanel, this.destinationFileTextField, "Destination folder"
+			verticalPanel, this.destinationFileTextField, "Destination folder",
+			additionalButtonLogic
 		);
 		JPanel fileCopyPanel = drawFileCopyPanel();
 		
 		/*
-	     * Necessary so the horizontal panel and the labels are aligned
+	     * Necessary so the file copy panel and the labels above are aligned
 	     * the same way horizontally.
 	     */
 		fileCopyPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
 		
 		verticalPanel.add(fileCopyPanel);
+		this.contentPane.add(verticalPanel, BorderLayout.CENTER);
 	}
 }

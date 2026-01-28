@@ -35,7 +35,8 @@ public class ComparableFile implements Comparable<ComparableFile> {
 	}
 
 	/**
-	 * Compares the files by their name lexicographically.
+	 * Compares the files by their name lexicographically. Directories always
+	 * go before than files.
 	 * @param o The other file.
 	 */
 	@Override
@@ -44,7 +45,19 @@ public class ComparableFile implements Comparable<ComparableFile> {
 		if (o == null) {
 			result = 1;
 		} else {
-			result = this.comparator.compare(this.name, o.name);
+			if (this.file.isDirectory()) {
+				if (o.file.isDirectory()) {
+					result = this.comparator.compare(this.name, o.name);					
+				} else {
+					result = -1;
+				}
+			} else {
+				if (o.file.isDirectory()) {
+					result = 1;
+				} else {
+					result = this.comparator.compare(this.name, o.name);					
+				}
+			}
 		}
 		return result;
 	}

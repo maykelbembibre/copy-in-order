@@ -5,13 +5,14 @@ import java.awt.Toolkit;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.FileSystemException;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 
 import javax.swing.JTextArea;
 import javax.swing.SwingWorker;
 
-import copy_in_order.logic.FileManagement;
+import copy_in_order.logic.FileManager;
 import copy_in_order.logic.exceptions.FileManagementException;
 import copy_in_order.ui.listeners.FileCopyPropertyChangeListener;
 
@@ -21,13 +22,14 @@ import copy_in_order.ui.listeners.FileCopyPropertyChangeListener;
  */
 public class FileCopyTask extends SwingWorker<Void, Void> {
 
+	private static final Collection<String> EXTENSIONS = Arrays.asList("mp3");
 	private final File sourceDirectory;
 	private final File destinationDirectory;
 	private final JTextArea statusNote;
 	private final Collection<Component> sensitiveComponents;
 	private final Component stopButton;
 	private String error;
-	private FileManagement fileManagement;
+	private FileManager fileManagement;
 	private volatile int totalFiles;
 	private volatile int copiedFiles;
 	
@@ -62,13 +64,13 @@ public class FileCopyTask extends SwingWorker<Void, Void> {
     	try {
     		this.setProgress(0);
     		this.statusNote.setText("Calculating data...");
-			this.fileManagement = new FileManagement(this.sourceDirectory, this.destinationDirectory, "mp3");
+			this.fileManagement = new FileManager(this.sourceDirectory, this.destinationDirectory, EXTENSIONS);
 			this.totalFiles = this.countFilesRecursively(this.sourceDirectory);
 			this.copiedFiles = 0;
 			this.statusNote.setText(
 				FileCopyPropertyChangeListener.createStatusNoteText(this.copiedFiles, this.totalFiles, this.getProgress())
 			);
-			this.copyRecursively(this.sourceDirectory, this.destinationDirectory);
+			this.copyRecursively(this.sourceDirectory, this.destinationDirectory, true);
 		} catch (FileManagementException e) {
 			this.error(e.getMessage());
 		} catch (FileSystemException e) {
@@ -134,21 +136,21 @@ public class FileCopyTask extends SwingWorker<Void, Void> {
 		return count;
 	}
 
-	private void copyRecursively(File fromFolder, File toFolder) throws IOException {
+	private void copyRecursively(File fromFolder, File toFolder, boolean root) throws IOException {
 		Iterator<File> fromFolderChildren = this.fileManagement.getChildren(fromFolder).iterator();
 		File fromFolderChild;
 		while (!this.isCancelled() && fromFolderChildren.hasNext()) {
     		fromFolderChild = fromFolderChildren.next();
     		if (fromFolderChild.isFile()) {
-    			FileManagement.copyFileToFolder(fromFolderChild, toFolder);
+    			FileManager.copyFileToFolder(fromFolderChild, toFolder);
     			this.copiedFiles++;
     			this.setProgress(Math.min(this.copiedFiles * 100 / this.totalFiles, 100));
     		} else {
     			File toFolderChild = new File(toFolder, fromFolderChild.getName());
     			if (!toFolderChild.isFile()) {
-    				FileManagement.createIfNotExists(toFolderChild);
-    				this.copyRecursively(fromFolderChild, toFolderChild);
-    				FileManagement.deleteIfEmpty(toFolderChild);
+    				FileManager.createIfNotExists(toFolderChild);
+    				this.copyRecursively(fromFolderChild, toFolderChild, false);
+    				FileManager.deleteIfEmpty(toFolderChild);
     			}
     		}
     	}

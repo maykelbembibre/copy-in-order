@@ -6,35 +6,31 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 
-import copy_in_order.logic.alphanumeric.AlphanumericComparator;
 import copy_in_order.logic.exceptions.FileManagementException;
 import copy_in_order.logic.models.ComparableFile;
 
 /**
  * Logic class for doing the file management operations.
  */
-public class FileManagement {
+public class FileManager {
 
-	private static final Comparator<String> ALPHANUMERIC_COMPARATOR = new AlphanumericComparator();
 	private final File sourceDirectory;
 	private final File destinationDirectory;
-	private final Collection<String> extensions;
+	private final FileOrderManager fileOrderManager;
 	
 	/**
 	 * Creates a file management object.
 	 * @param sourceDirectory The source directory.
 	 * @param destinationDirectory The destination directory.
-	 * @param extension An extension of the files to copy.
-	 * @param additionalExtensions Additional extensions of files to copy.
+	 * @param extensions Extensions of the files to copy.
 	 * @throws FileManagementException If something goes wrong.
 	 */
-	public FileManagement(
-		File sourceDirectory, File destinationDirectory, String extension, String... additionalExtensions
+	public FileManager(
+		File sourceDirectory, File destinationDirectory, Collection<String> extensions
 	) throws FileManagementException {
 		this.sourceDirectory = sourceDirectory;
 		this.destinationDirectory = destinationDirectory;
@@ -51,11 +47,11 @@ public class FileManagement {
 		if (this.sourceDirectory.getAbsolutePath().equals(this.destinationDirectory.getAbsolutePath())) {
 			throw new FileManagementException("You cannot copy files to the same directory.");
 		}
-		this.extensions = new ArrayList<>();
-		this.extensions.add(extension.toLowerCase());
-		for (String additionalExtension : additionalExtensions) {
-			this.extensions.add(additionalExtension.toLowerCase());
+		Collection<String> lowerCaseExtensions = new ArrayList<>();
+		for (String extension : extensions) {
+			lowerCaseExtensions.add(extension.toLowerCase());
 		}
+		this.fileOrderManager = new FileOrderManager(lowerCaseExtensions);
 	}
 	
 	/**
@@ -65,7 +61,7 @@ public class FileManagement {
 	 * @return The list of filtered and ordered children.
 	 */
 	public List<File> getChildren(File folder) {
-		List<ComparableFile> children = this.order(folder.listFiles());
+		List<ComparableFile> children = this.fileOrderManager.order(Arrays.asList(folder.listFiles()));
 		List<File> result = new ArrayList<>();
 		for (ComparableFile child : children) {
 			result.add(child.getFile());
@@ -117,40 +113,6 @@ public class FileManagement {
 		} else {
 			result = 0;
 		}
-		return result;
-	}
-	
-	private static String getExtension(String fileName) {
-		String extension = "";
-		if (fileName != null && !fileName.isEmpty()) {
-			int pos = fileName.length() - 1;
-			while (pos > 0 && extension.isEmpty()) {
-				if (fileName.charAt(pos) == '.') {
-					extension = fileName.substring(pos + 1, fileName.length());
-				}
-				pos--;
-			}
-		}
-		return extension;
-	}
-	
-	private List<ComparableFile> filter(File[] files) {
-		List<ComparableFile> result = new ArrayList<>();
-		if (files != null) {
-			for (File file : files) {
-				if (file != null &&
-					(file.isDirectory() || this.extensions.contains(getExtension(file.getName()).toLowerCase()))
-				) {
-					result.add(new ComparableFile(ALPHANUMERIC_COMPARATOR, file));
-				}
-			}
-		}
-		return result;
-	}
-	
-	private List<ComparableFile> order(File[] files) {
-		List<ComparableFile> result = this.filter(files);
-		Collections.sort(result);
 		return result;
 	}
 }
