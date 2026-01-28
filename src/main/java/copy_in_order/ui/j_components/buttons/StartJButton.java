@@ -7,24 +7,35 @@ import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Set;
 
 import javax.swing.JButton;
 import javax.swing.JProgressBar;
 import javax.swing.JTextArea;
 
 import copy_in_order.ui.AppWindow;
-import copy_in_order.ui.j_components.JFileTextField;
+import copy_in_order.ui.j_components.FileJTextField;
 import copy_in_order.ui.listeners.FileCopyPropertyChangeListener;
 import copy_in_order.ui.workers.FileCopyTask;
 
-public class StartButton extends JButton {
+/**
+ * The start button.
+ */
+public class StartJButton extends JButton {
 
 	private static final long serialVersionUID = -6805354002802955071L;
 
-	public StartButton(AppWindow appWindow, JProgressBar progressBar, JTextArea taskOutput, JButton stopButton) {
+	/**
+	 * Creates a button that starts a task.
+	 * @param appWindow The root app window.
+	 * @param progressBar The progress bar for the task that is going to start.
+	 * @param taskOutput The text area to output the progress of the task that is going to start.
+	 * @param stopButton The stop button for the task that is going to start.
+	 */
+	public StartJButton(AppWindow appWindow, JProgressBar progressBar, JTextArea taskOutput, JButton stopButton) {
 		super("Copy files");
-		JFileTextField sourceFileTextField = appWindow.getSourceFileTextField();
-		JFileTextField destinationFileTextField = appWindow.getDestinationFileTextField();
+		FileJTextField sourceFileTextField = appWindow.getSourceFileTextField();
+		FileJTextField destinationFileTextField = appWindow.getDestinationFileTextField();
 		Collection<Component> sensitiveComponents = Arrays.asList(
 			this, sourceFileTextField, destinationFileTextField,
 			appWindow.getSourceFileChooseButton(), appWindow.getDestinationFileChooseButton()
@@ -40,11 +51,12 @@ public class StartButton extends JButton {
 		    	for (Component component : sensitiveComponents) {
 		    		component.setEnabled(false);
 		    	}
+		    	Set<File> selectedFiles = appWindow.getSelectedFiles();
 		        
 		        //Instances of javax.swing.SwingWorker are not reusuable, so
 		        //we create new instances as needed.
 		    	FileCopyTask task = new FileCopyTask(
-		        	sourceDirectory, destinationDirectory, taskOutput, sensitiveComponents, stopButton
+		        	sourceDirectory, destinationDirectory, taskOutput, sensitiveComponents, stopButton, selectedFiles
 		        );
 		        PropertyChangeListener propertyChangeListener = new FileCopyPropertyChangeListener(
 	            	progressBar, taskOutput, task

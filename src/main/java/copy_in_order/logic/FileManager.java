@@ -24,6 +24,10 @@ public class FileManager {
 	 * Creates a file management object.
 	 * @param sourceDirectory The source directory.
 	 * @param destinationDirectory The destination directory.
+	 * @param selectedFiles The directories and files from the first level of the
+	 * source directory's children that are selected for copy. If <code>null</code>,
+	 * all directories and files will be copied. If empty, no directories or files
+	 * will be copied.
 	 * @param extensions Extensions of the files to copy.
 	 * @throws FileManagementException If something goes wrong.
 	 */

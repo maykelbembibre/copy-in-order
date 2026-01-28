@@ -7,6 +7,7 @@ import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
+import java.util.Set;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -24,11 +25,11 @@ import javax.swing.JTextArea;
 import javax.swing.JTextField;
 
 import copy_in_order.ui.j_components.DirectoryChooser;
+import copy_in_order.ui.j_components.FileSelectionJPanel;
 import copy_in_order.ui.j_components.HorizontalSeparator;
-import copy_in_order.ui.j_components.JFileTextField;
+import copy_in_order.ui.j_components.FileJTextField;
 import copy_in_order.ui.j_components.ReadOnlyJTextArea;
-import copy_in_order.ui.j_components.SubfolderSelectionJPanel;
-import copy_in_order.ui.j_components.buttons.StartButton;
+import copy_in_order.ui.j_components.buttons.StartJButton;
 import copy_in_order.ui.j_components.buttons.StopJButton;
 import copy_in_order.ui.runnables.FileRunnable;
 import copy_in_order.ui.workers.FileCopyTask;
@@ -44,12 +45,12 @@ public class AppWindow extends JFrame {
 	
 	private final JPanel contentPane;
 	private final JFileChooser directoryChooser = new DirectoryChooser();
-	private JFileTextField sourceFileTextField = createJFileTextField();
-	private JFileTextField destinationFileTextField = createJFileTextField();
+	private FileJTextField sourceFileTextField = createJFileTextField();
+	private FileJTextField destinationFileTextField = createJFileTextField();
 	private JButton sourceFileChooseButton;
 	private JButton destinationFileChooseButton;
 	private FileCopyTask task;
-	private SubfolderSelectionJPanel subfolderSelection;
+	private FileSelectionJPanel fileSelectionPanel;
 	
 	/**
 	 * Creates the window.
@@ -86,11 +87,11 @@ public class AppWindow extends JFrame {
 		this.task = task;
 	}
 
-	public JFileTextField getSourceFileTextField() {
+	public FileJTextField getSourceFileTextField() {
 		return sourceFileTextField;
 	}
 
-	public JFileTextField getDestinationFileTextField() {
+	public FileJTextField getDestinationFileTextField() {
 		return destinationFileTextField;
 	}
 
@@ -101,20 +102,28 @@ public class AppWindow extends JFrame {
 	public JButton getDestinationFileChooseButton() {
 		return destinationFileChooseButton;
 	}
+	
+	/**
+	 * Returns the files that have been selected on the file selection panel
+	 * that is on this window.
+	 * @return The selected files.
+	 */
+	public Set<File> getSelectedFiles() {
+		return this.fileSelectionPanel.getSelectedFiles();
+	}
 
 	private static void adjustTextField(JTextField jTextField) {
 		jTextField.setMaximumSize(new Dimension(Integer.MAX_VALUE, jTextField.getPreferredSize().height));
 	}
 	
-	private static JFileTextField createJFileTextField() {
-		JFileTextField jFileTextField = new JFileTextField();
+	private static FileJTextField createJFileTextField() {
+		FileJTextField jFileTextField = new FileJTextField();
 		adjustTextField(jFileTextField);
 		return jFileTextField;
 	}
 	
 	private JButton addFolderSelectionComponents(
-		Container verticalPanel, JFileTextField fileTextField, String label,
-		FileRunnable additionalButtonLogic
+		Container verticalPanel, FileJTextField fileTextField, String label
 	) {
 		JPanel folderSelectionPanel = new JPanel();
 		folderSelectionPanel.setLayout(new BoxLayout(folderSelectionPanel, BoxLayout.Y_AXIS));
@@ -139,11 +148,8 @@ public class AppWindow extends JFrame {
 			public void actionPerformed(ActionEvent e) {
 				int returnVal = AppWindow.this.directoryChooser.showOpenDialog(verticalPanel);
 		        if (returnVal == JFileChooser.APPROVE_OPTION) {
-		            File file = AppWindow.this.directoryChooser.getSelectedFile();
-		            fileTextField.setSelectedFile(file);
-		            if (additionalButtonLogic != null && file != null) {
-		            	additionalButtonLogic.run(file);
-		            }
+		            File directory = AppWindow.this.directoryChooser.getSelectedFile();
+		            fileTextField.setSelectedFile(directory);
 		        }
 			}});
 		horizontalPanel.add(selectDirectoryButton);
@@ -157,9 +163,9 @@ public class AppWindow extends JFrame {
 		JPanel fileCopyPanel = new JPanel();
 		fileCopyPanel.setLayout(new BoxLayout(fileCopyPanel, BoxLayout.Y_AXIS));
 		
-		this.subfolderSelection = new SubfolderSelectionJPanel();
-		subfolderSelection.setBorder(BorderFactory.createEmptyBorder(GAP, GAP, GAP, GAP));
-		fileCopyPanel.add(subfolderSelection);
+		this.fileSelectionPanel = new FileSelectionJPanel();
+		fileSelectionPanel.setBorder(BorderFactory.createEmptyBorder(GAP, GAP, GAP, GAP));
+		fileCopyPanel.add(fileSelectionPanel);
 		fileCopyPanel.add(new HorizontalSeparator());
 		
 		JProgressBar progressBar = new JProgressBar(0, 100);
@@ -167,7 +173,7 @@ public class AppWindow extends JFrame {
         progressBar.setStringPainted(true);
         JTextArea taskOutput = new ReadOnlyJTextArea();
 		JButton stopButton = new StopJButton(this);
-		JButton startButton = new StartButton(this, progressBar, taskOutput, stopButton);
+		JButton startButton = new StartJButton(this, progressBar, taskOutput, stopButton);
         
         JPanel horizontalPanel = new JPanel();
         BoxLayout horizontalLayout = new BoxLayout(horizontalPanel, BoxLayout.X_AXIS);
@@ -195,18 +201,18 @@ public class AppWindow extends JFrame {
 	private void drawContentPane() {
 		JPanel verticalPanel = new JPanel();
 		verticalPanel.setLayout(new BoxLayout(verticalPanel, BoxLayout.Y_AXIS));
-		FileRunnable additionalButtonLogic = new FileRunnable() {
+		FileRunnable directoryChangedLogic = new FileRunnable() {
 			@Override
 			public void run(File file) {
-				subfolderSelection.drawSubFolders(file);
+				fileSelectionPanel.drawSubFolders(file);
 			}
 		};
+		this.sourceFileTextField.setDirectoryChangedLogic(directoryChangedLogic);
 		this.sourceFileChooseButton = addFolderSelectionComponents(
-			verticalPanel, this.sourceFileTextField, "Source folder",
-			additionalButtonLogic
+			verticalPanel, this.sourceFileTextField, "Source folder"
 		);
 		this.destinationFileChooseButton = addFolderSelectionComponents(
-			verticalPanel, this.destinationFileTextField, "Destination folder", null
+			verticalPanel, this.destinationFileTextField, "Destination folder"
 		);
 		JPanel fileCopyPanel = drawFileCopyPanel();
 		

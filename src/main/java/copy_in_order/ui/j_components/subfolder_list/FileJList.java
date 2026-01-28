@@ -5,13 +5,19 @@ import java.awt.event.MouseEvent;
 import java.io.File;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import javax.swing.DefaultListModel;
 import javax.swing.JList;
 import javax.swing.ListSelectionModel;
 
-public class SubfolderJList extends JList<File> {
+/**
+ * An implementation of {@link JList} that contains a list of files together
+ * with checkboxes for selecting them.
+ */
+public class FileJList extends JList<File> {
 
 	private static final long serialVersionUID = -6283577688791254940L;
 
@@ -19,14 +25,21 @@ public class SubfolderJList extends JList<File> {
 	private final FileListCellRenderer listCellRenderer;
 	private final Map<File, Boolean> selectedFiles = new HashMap<>();
 	
-	public SubfolderJList() {
+	/**
+	 * Creates a new list of files.
+	 */
+	public FileJList() {
 		this.setModel(this.defaultListModel);
 		this.listCellRenderer = new FileListCellRenderer(this.selectedFiles);
 		this.setCellRenderer(this.listCellRenderer);
 		this.addMouseListener(new MouseAdapter() {
 		    @Override
 		    public void mouseClicked(MouseEvent e) {
-		    	if (listCellRenderer.isEnabled()) {
+		    	/*
+		    	 * When the list is not enabled we do not want its checkboxes to respond
+		    	 * to clicks.
+		    	 */
+		    	if (isEnabled()) {
 			        int index = locationToIndex(e.getPoint());
 			        if (index >= 0) {
 			        	File file = getModel().getElementAt(index);
@@ -38,6 +51,11 @@ public class SubfolderJList extends JList<File> {
 		});
 	}
 
+	/**
+	 * Updates the model of this list to the given collection of files.
+	 * @param files The collection of files that will be painted on this
+	 * list.
+	 */
 	public void updateModel(Collection<File> files) {
 		this.defaultListModel.clear();
 		
@@ -64,7 +82,29 @@ public class SubfolderJList extends JList<File> {
 			this.selectedFiles.put(file, !enabled);
 		}
 		this.listCellRenderer.setEnabled(enabled);
-		repaint(getCellBounds(0, this.getModel().getSize() - 1));
+		if (this.getModel().getSize() > 0) {
+			/*
+			 * In this case the list has to be repainted to reflect the new
+			 * state of the checkboxes.
+			 */
+			repaint(getCellBounds(0, this.getModel().getSize() - 1));
+		}
+	}
+	
+	/**
+	 * Returns the files that are selected on this list.
+	 * @return The files that are selected on this list.
+	 */
+	public Set<File> getSelectedFiles() {
+		Set<File> result = new HashSet<>();
+		Boolean selected;
+		for (File file : this.selectedFiles.keySet()) {
+			selected = this.selectedFiles.get(file);
+			if (selected != null && selected) {
+				result.add(file);
+			}
+		}
+		return result;
 	}
 	
 	private void recreateSelectionModel(Iterable<File> files) {

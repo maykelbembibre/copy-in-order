@@ -8,10 +8,17 @@ import javax.swing.JButton;
 import copy_in_order.ui.AppWindow;
 import copy_in_order.ui.workers.FileCopyTask;
 
+/**
+ * A stop button.
+ */
 public class StopJButton extends JButton {
 
 	private static final long serialVersionUID = -7548150077454006931L;
 
+	/**
+	 * Creates a stop button.
+	 * @param appWindow The root app window.
+	 */
 	public StopJButton(AppWindow appWindow) {
 		super("Stop");
 		this.setEnabled(false);

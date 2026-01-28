@@ -8,6 +8,7 @@ import java.nio.file.FileSystemException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.Set;
 
 import javax.swing.JTextArea;
 import javax.swing.SwingWorker;
@@ -28,6 +29,7 @@ public class FileCopyTask extends SwingWorker<Void, Void> {
 	private final JTextArea statusNote;
 	private final Collection<Component> sensitiveComponents;
 	private final Component stopButton;
+	private final Set<File> selectedFiles;
 	private String error;
 	private FileManager fileManagement;
 	private volatile int totalFiles;
@@ -45,13 +47,14 @@ public class FileCopyTask extends SwingWorker<Void, Void> {
     public FileCopyTask(
     	File sourceDirectory, File destinationDirectory,
     	JTextArea statusNote, Collection<Component> sensitiveComponents,
-    	Component stopButton
+    	Component stopButton, Set<File> selectedFiles
     ) {
     	this.sourceDirectory = sourceDirectory;
     	this.destinationDirectory = destinationDirectory;
 		this.statusNote = statusNote;
 		this.sensitiveComponents = sensitiveComponents;
 		this.stopButton = stopButton;
+		this.selectedFiles = selectedFiles;
 	}
 
     /**
@@ -65,7 +68,7 @@ public class FileCopyTask extends SwingWorker<Void, Void> {
     		this.setProgress(0);
     		this.statusNote.setText("Calculating data...");
 			this.fileManagement = new FileManager(this.sourceDirectory, this.destinationDirectory, EXTENSIONS);
-			this.totalFiles = this.countFilesRecursively(this.sourceDirectory);
+			this.totalFiles = this.countFilesRecursively(this.sourceDirectory, true);
 			this.copiedFiles = 0;
 			this.statusNote.setText(
 				FileCopyPropertyChangeListener.createStatusNoteText(this.copiedFiles, this.totalFiles, this.getProgress())
@@ -116,21 +119,25 @@ public class FileCopyTask extends SwingWorker<Void, Void> {
         	this.statusNote.setText("Error: " + this.error);
         } else if (this.isCancelled()) {
         	this.statusNote.setText("Task cancelled.");
+        } else if (this.selectedFiles.isEmpty()) {
+        	this.statusNote.setText("You didn't select any files so there is nothing to do.");
         } else {
         	this.statusNote.setText("File copy has been completed.");
         }
     }
 	
-	private int countFilesRecursively(File fromFolder) {
-		Iterator<File> children = this.fileManagement.getChildren(fromFolder).iterator();
-		File child;
+	private int countFilesRecursively(File file, boolean root) {
+		Iterator<File> children = this.fileManagement.getChildren(file).iterator();
+		File fromFolderChild;
 		int count = 0;
     	while (!this.isCancelled() && children.hasNext()) {
-    		child = children.next();
-    		if (child.isFile()) {
-    			count++;
-    		} else {
-    			count = count + countFilesRecursively(child);
+    		fromFolderChild = children.next();
+    		if (!root || isSelected(fromFolderChild)) {
+	    		if (fromFolderChild.isFile()) {
+	    			count++;
+	    		} else {
+	    			count = count + countFilesRecursively(fromFolderChild, false);
+	    		}
     		}
     	}
 		return count;
@@ -141,17 +148,19 @@ public class FileCopyTask extends SwingWorker<Void, Void> {
 		File fromFolderChild;
 		while (!this.isCancelled() && fromFolderChildren.hasNext()) {
     		fromFolderChild = fromFolderChildren.next();
-    		if (fromFolderChild.isFile()) {
-    			FileManager.copyFileToFolder(fromFolderChild, toFolder);
-    			this.copiedFiles++;
-    			this.setProgress(Math.min(this.copiedFiles * 100 / this.totalFiles, 100));
-    		} else {
-    			File toFolderChild = new File(toFolder, fromFolderChild.getName());
-    			if (!toFolderChild.isFile()) {
-    				FileManager.createIfNotExists(toFolderChild);
-    				this.copyRecursively(fromFolderChild, toFolderChild, false);
-    				FileManager.deleteIfEmpty(toFolderChild);
-    			}
+    		if (!root || isSelected(fromFolderChild)) {
+	    		if (fromFolderChild.isFile()) {
+	    			FileManager.copyFileToFolder(fromFolderChild, toFolder);
+	    			this.copiedFiles++;
+	    			this.setProgress(Math.min(this.copiedFiles * 100 / this.totalFiles, 100));
+	    		} else {
+	    			File toFolderChild = new File(toFolder, fromFolderChild.getName());
+	    			if (!toFolderChild.isFile()) {
+	    				FileManager.createIfNotExists(toFolderChild);
+	    				this.copyRecursively(fromFolderChild, toFolderChild, false);
+	    				FileManager.deleteIfEmpty(toFolderChild);
+	    			}
+	    		}
     		}
     	}
     }
@@ -160,4 +169,8 @@ public class FileCopyTask extends SwingWorker<Void, Void> {
     	this.cancel(true);
     	this.error = error;
     }
+	
+	private boolean isSelected(File file) {
+		return this.selectedFiles == null || this.selectedFiles.contains(file);
+	}
 }
