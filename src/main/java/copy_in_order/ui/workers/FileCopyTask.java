@@ -143,21 +143,33 @@ public class FileCopyTask extends SwingWorker<Void, Void> {
 		return count;
 	}
 
-	private void copyRecursively(File fromFolder, File toFolder, boolean root) throws IOException {
-		Iterator<File> fromFolderChildren = this.fileManagement.getChildren(fromFolder).iterator();
-		File fromFolderChild;
-		while (!this.isCancelled() && fromFolderChildren.hasNext()) {
-    		fromFolderChild = fromFolderChildren.next();
-    		if (!root || isSelected(fromFolderChild)) {
-	    		if (fromFolderChild.isFile()) {
-	    			FileManager.copyFileToFolder(fromFolderChild, toFolder);
+	private void copyRecursively(File fromDirectory, File toDirectory, boolean root) throws IOException, FileManagementException {
+		Iterator<File> fromDirectoryChildren = this.fileManagement.getChildren(fromDirectory).iterator();
+		File fromDirectoryChild;
+		while (!this.isCancelled() && fromDirectoryChildren.hasNext()) {
+    		fromDirectoryChild = fromDirectoryChildren.next();
+    		if (toDirectory.equals(fromDirectoryChild)) {
+    			/*
+    			 * This prevents a highly problematic loop error where an infinite directory
+    			 * hierarchy is copied to toDirectory.
+    			 */
+    			throw new FileManagementException(
+    				"A loop error has occurred because you've tried to copy the directory "
+    				+ fromDirectoryChild.getAbsolutePath() + " into the directory "
+    				+ toDirectory.getAbsolutePath()
+    				+ ". Note that your request is absurd."
+    			);
+    		}
+    		if (!root || isSelected(fromDirectoryChild)) {
+	    		if (fromDirectoryChild.isFile()) {
+	    			FileManager.copyFileToFolder(fromDirectoryChild, toDirectory);
 	    			this.copiedFiles++;
 	    			this.setProgress(Math.min(this.copiedFiles * 100 / this.totalFiles, 100));
 	    		} else {
-	    			File toFolderChild = new File(toFolder, fromFolderChild.getName());
+	    			File toFolderChild = new File(toDirectory, fromDirectoryChild.getName());
 	    			if (!toFolderChild.isFile()) {
 	    				FileManager.createIfNotExists(toFolderChild);
-	    				this.copyRecursively(fromFolderChild, toFolderChild, false);
+	    				this.copyRecursively(fromDirectoryChild, toFolderChild, false);
 	    				FileManager.deleteIfEmpty(toFolderChild);
 	    			}
 	    		}
