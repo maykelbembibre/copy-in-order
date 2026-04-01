@@ -23,7 +23,7 @@ import copy_in_order.ui.listeners.FileCopyPropertyChangeListener;
  */
 public class FileCopyTask extends SwingWorker<Void, Void> {
 
-	public static final Collection<String> EXTENSIONS = Arrays.asList("mp3");
+	public static final Collection<String> EXTENSIONS = Arrays.asList("mp3", "flac");
 	private final File sourceDirectory;
 	private final File destinationDirectory;
 	private final JTextArea statusNote;
